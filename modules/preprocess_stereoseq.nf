@@ -18,7 +18,7 @@ process PREPROCESS_STEREOSEQ {
     path "versions.yml", topic: 'versions'
 
     script:
-    def bs = binsize ?: params.stereoseq_binsize ?: "50"
+    def bs = params.stereoseq_binsize ?: "50"
     """
     set -euo pipefail
 
