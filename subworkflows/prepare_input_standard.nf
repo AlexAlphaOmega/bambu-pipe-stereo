@@ -22,8 +22,9 @@ workflow PREPARE_INPUT_STANDARD {
     ch_unique_chem = ch_samples.map { _sample, _path, meta -> meta.chemistry }.unique()
 
     // extract 10x barcodes for standard chemistries only (copy files from spaceranger container)
-    ch_unique_standard = ch_unique_chem.filter { chem -> params.valid_chemistries.contains(chem) }
-    ch_unique_custom   = ch_unique_chem.filter { chem -> !params.valid_chemistries.contains(chem) }
+    // stereoseq has no fixed whitelist; ST_BarcodeMap does CID->spot filtering, so treat it as custom
+    ch_unique_standard = ch_unique_chem.filter { chem -> params.valid_chemistries.contains(chem) && chem != 'stereoseq' }
+    ch_unique_custom   = ch_unique_chem.filter { chem -> !params.valid_chemistries.contains(chem) || chem == 'stereoseq' }
     EXTRACT_10X_BARCODES(ch_unique_standard, ch_barcode_coordinate_config)
     ch_barcodes = EXTRACT_10X_BARCODES.out.barcodes
         .mix(ch_unique_custom.map { chem -> [chem, null] })
