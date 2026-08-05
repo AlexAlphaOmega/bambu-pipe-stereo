@@ -65,6 +65,10 @@ workflow {
     ch_input_fastq = PREPARE_INPUT_STANDARD.out.fastq
     ch_input_bam = PREPARE_INPUT_STANDARD.out.bam
 
+    // DEBUG: print channel contents
+    ch_input_fastq.view { it -> println "DBG input_fastq: ${it}" }
+    ch_input_bam.view { it -> println "DBG input_bam: ${it}" }
+
     // split fastq into stereoseq + standard (10x/visium)
     ch_stereoseq_fastq = ch_input_fastq.filter { _sample, _path, meta -> meta.chemistry == 'stereoseq' }
     ch_standard_fastq  = ch_input_fastq.filter { _sample, _path, meta -> meta.chemistry != 'stereoseq' }
