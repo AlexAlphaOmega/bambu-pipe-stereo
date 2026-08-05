@@ -69,7 +69,7 @@ process PREPROCESS_STEREOSEQ {
     #=======================================================================================================
     # Step 3: Split Flexiplex output -> read1 (CID+MID) + read2 (cDNA)
     #=======================================================================================================
-    split_stereoseq_barcode.py \
+    python3 split_stereoseq_barcode.py \
         "${sample}_read1.fq" "${sample}_read2.fq" < ${sample}_flexiplex_out.fastq
 
     rm ${sample}_flexiplex_out.fastq
@@ -95,7 +95,7 @@ process PREPROCESS_STEREOSEQ {
     #=======================================================================================================
     # Step 5: Bin to target binsize + rewrite read name to bambu-pipe format
     #=======================================================================================================
-    bin_stereoseq_barcode.py ${sample}_mapped_r2.fq.gz ${bs} \
+    python3 bin_stereoseq_barcode.py ${sample}_mapped_r2.fq.gz ${bs} \
         | pigz -p $task.cpus -c > ${sample}_preprocessed_reads.fastq.gz
 
     rm -f ${sample}_mapped_r1.fq.gz ${sample}_mapped_r2.fq.gz
