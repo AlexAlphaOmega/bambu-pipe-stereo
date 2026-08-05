@@ -32,6 +32,20 @@ process SEURAT_SINGLE_SAMPLE {
     cat("counts dim:", dim(counts), " totals:", sum(counts), "\n")
     if (ncol(counts) == 0 || nrow(counts) == 0)
         stop("Empty counts matrix - no cells or genes after filtering")
+    if (ncol(counts) < 3) {
+        # too few cells to cluster (e.g. small test data); save placeholders so the
+        # pipeline continues (BAMBU_EM falls back to per-cell quantification)
+        warning("Too few cells for clustering (", ncol(counts), ") - skipping Seurat clustering")
+        saveRDS(NULL, "seurat_obj.rds")
+        saveRDS(NULL, "clusters.rds")
+        saveRDS(NULL, "cell_mix.rds")
+        writeLines(c(
+            '"${task.process}":',
+            paste0('    R: ',                   R.Version()\$version.string),
+            paste0('    seurat: ',              as.character(packageVersion("Seurat")))
+        ), "versions.yml")
+        quit(save = "no", status = 0)
+    }
     # Retry with dense matrix if sparse path fails (Seurat v5 bug)
     cellMix <- tryCatch(
         CreateSeuratObject(counts = counts, project = "cellMix", min.cells = 1),
