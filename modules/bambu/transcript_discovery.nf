@@ -30,7 +30,7 @@ process BAMBU_TRANSCRIPT_DISCOVERY{
 	#!/usr/bin/env Rscript
     if ("$params.bambu_path" == "null") { library("bambu") } else { library("devtools"); load_all("$params.bambu_path") }
     library(DropletUtils)
-    source(Sys.which("save_counts.R"))
+    source("$projectDir/bin/save_counts.R")
 
     annotation <- readRDS("$bambu_annotation")
     readClassFile <- strsplit("${rds_files.join(',')}", ",")[[1]]
