@@ -23,6 +23,12 @@ process SEURAT_SINGLE_SAMPLE {
 
     se     <- readRDS("$se")
     counts <- assays(se)\$counts
+    # Seurat v5 LayerData<- fails on non-standard sparse formats; coerce to dgCMatrix
+    counts <- as(as(counts, "CsparseMatrix"), "CsparseMatrix")
+    counts <- as(counts, "dgCMatrix")
+    # drop empty rows/cols that trip up CreateSeuratObject
+    counts <- counts[Matrix::rowSums(counts) > 0, , drop = FALSE]
+    counts <- counts[, Matrix::colSums(counts) > 0, drop = FALSE]
     dim    <- $params.seurat_dim_single
 
     # Single sample scRNA-seq clustering adapted from https://satijalab.org/seurat/articles/pbmc3k_tutorial.html
