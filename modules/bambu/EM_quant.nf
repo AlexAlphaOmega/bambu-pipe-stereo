@@ -24,7 +24,7 @@ process BAMBU_EM{
     #!/usr/bin/env Rscript
     if ("$params.bambu_path" == "null") { library("bambu") } else { library("devtools"); load_all("$params.bambu_path") }
     library(DropletUtils)
-    source(Sys.which("save_counts.R"))
+    source("$projectDir/bin/save_counts.R")
 
     extendedAnno <- readRDS("$extended_annotation")
     quantData    <- readRDS("$quant_data")
