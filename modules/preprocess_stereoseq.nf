@@ -90,8 +90,8 @@ process PREPROCESS_STEREOSEQ {
 
     ${params.stereoseq_barcode_map} --in ${params.stereoseq_mask} \
         --in1 ${sample}_read1.fq --in2 ${sample}_read2.fq \
-        --out ${sample}_mapped_r1.fq.gz --out2 ${sample}_mapped_r2.fq.gz \
-        --PEout --mismatch 1 -w ${task.cpus}
+        --out ${sample}_mapped_r2.fq.gz \
+        --mismatch 2 -w ${task.cpus}
 
     export LD_LIBRARY_PATH=\$_orig_ld
 
@@ -103,7 +103,7 @@ process PREPROCESS_STEREOSEQ {
     python3 $projectDir/bin/bin_stereoseq_barcode.py ${sample}_mapped_r2.fq.gz ${bs} \
         | pigz -p $task.cpus -c > ${sample}_preprocessed_reads.fastq.gz
 
-    rm -f ${sample}_mapped_r1.fq.gz ${sample}_mapped_r2.fq.gz
+    rm -f ${sample}_mapped_r2.fq.gz
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
