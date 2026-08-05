@@ -1,5 +1,6 @@
 process SEURAT_MULTI_SAMPLE {
     publishDir "$params.output_dir", mode: 'copy', pattern: 'seurat_obj.rds'
+    publishDir "$params.output_dir", mode: 'copy', pattern: 'umap_clusters.png'
     publishDir "$params.output_dir/intermediate_R", mode: 'copy', pattern: 'clusters.rds', enabled: params.save_intermediates
     label "r"
     label "medium_cpu"
@@ -13,6 +14,7 @@ process SEURAT_MULTI_SAMPLE {
     output:
     path ('clusters.rds'), emit: clusters
     path ('seurat_obj.rds'), emit: seurat_obj
+    path ('umap_clusters.png'), emit: umap_plot
     path "versions.yml", topic: 'versions'
 
     script:
@@ -53,7 +55,13 @@ process SEURAT_MULTI_SAMPLE {
     dim <- min(dim, ncol(cellMix[["harmony"]]))
     cellMix <- FindNeighbors(cellMix, reduction = "harmony", dims = 1:dim)
     cellMix <- FindClusters(cellMix, resolution = $params.resolution, cluster.name = "harmony_clusters")
+    cellMix <- RunUMAP(cellMix, reduction = "harmony", dims = 1:$params.seurat_dim_multi)
     saveRDS(cellMix, "seurat_obj.rds")
+
+    # Plot UMAP colored by cluster
+    png("umap_clusters.png", width = 1200, height = 1000, res = 150)
+    print(DimPlot(cellMix, reduction = "umap", group.by = "harmony_clusters", label = TRUE) + ggtitle("UMAP - clusters"))
+    dev.off()
 
     # Build ordered list of CompressedCharacterLists, one per sample, in quantData order
     allBarcodes   <- names(cellMix\$harmony_clusters)
