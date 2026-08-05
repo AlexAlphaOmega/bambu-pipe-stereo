@@ -58,8 +58,9 @@ process PREPROCESS_STEREOSEQ {
     IFS=',' read -r _ left_flank barcode umi right_flank < <(awk -F',' -v chem=stereoseq '\$1 == chem' $flank_seq_config)
     flank_seq="-x \$left_flank -b \$barcode -u \$umi -x \$right_flank"
 
-    # 2a. Count barcodes (creates flexiplex_barcodes_counts.txt)
-    flexiplex -p $task.cpus \$flank_seq -f 0 ${sample}_chopper_out.fastq
+    # 2a. Count barcodes (creates flexiplex_barcodes_counts.txt); use the SAME flank
+    #      search as the demux so the barcode list matches what demux re-extracts.
+    flexiplex -p $task.cpus \$flank_seq -f $params.flexiplex_f_3prime -e $params.flexiplex_e ${sample}_chopper_out.fastq
 
     # 2b. Extract the barcode list (no whitelist for stereoseq; ST_BarcodeMap does CID filtering)
     awk -F'\\t' '\$1 ~ /^[ACGTNacgtn]+\$/ && length(\$1) == 25 {print \$1}' flexiplex_barcodes_counts.txt > ${sample}_barcode_list.txt
