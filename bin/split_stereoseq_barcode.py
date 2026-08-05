@@ -31,13 +31,16 @@ def main():
             cb_parts = cb_part.split("_")
             cid = cb_parts[0]  # CID (25bp)
             mid = cb_parts[1][-MID_LEN:]  # MID (10bp, last 10 of the UMI field)
+            read_id = rest.split("#")[1] if "#" in rest else ""
+            read_id = read_id.split("\t")[0]  # strip trailing tags
 
-            new_name = f"@{cid}_{mid}#{rest.split('#')[1] if '#' in rest else ''}\n"
+            # clean 4-line FASTQ: @name / seq / + / qual  (no tags in name)
+            new_name = f"@{cid}_{mid}#{read_id}\n"
             f1.write(new_name)
             f1.write(f"{cid}{mid}\n+\n{qual}\n")
             f2.write(new_name)
             f2.write(seq)
-            f2.write(sep)
+            f2.write("+\n")
             f2.write(qual_line)
 
             name = sys.stdin.readline()
