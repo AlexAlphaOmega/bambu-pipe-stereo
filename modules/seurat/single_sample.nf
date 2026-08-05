@@ -24,15 +24,22 @@ process SEURAT_SINGLE_SAMPLE {
     se     <- readRDS("$se")
     counts <- assays(se)\$counts
     # Seurat v5 LayerData<- fails on non-standard sparse formats; coerce to dgCMatrix
-    counts <- as(as(counts, "CsparseMatrix"), "CsparseMatrix")
+    counts <- as(counts, "CsparseMatrix")
     counts <- as(counts, "dgCMatrix")
     # drop empty rows/cols that trip up CreateSeuratObject
     counts <- counts[Matrix::rowSums(counts) > 0, , drop = FALSE]
     counts <- counts[, Matrix::colSums(counts) > 0, drop = FALSE]
+    cat("counts dim:", dim(counts), " totals:", sum(counts), "\n")
+    if (ncol(counts) == 0 || nrow(counts) == 0)
+        stop("Empty counts matrix - no cells or genes after filtering")
+    # Retry with dense matrix if sparse path fails (Seurat v5 bug)
+    cellMix <- tryCatch(
+        CreateSeuratObject(counts = counts, project = "cellMix", min.cells = 1),
+        error = function(e) CreateSeuratObject(counts = as.matrix(counts), project = "cellMix", min.cells = 1)
+    )
     dim    <- $params.seurat_dim_single
 
     # Single sample scRNA-seq clustering adapted from https://satijalab.org/seurat/articles/pbmc3k_tutorial.html
-    cellMix <- CreateSeuratObject(counts = counts, project = "cellMix", min.cells = 1)
     cellMix <- NormalizeData(cellMix, normalization.method = "LogNormalize", scale.factor = 10000)
     cellMix <- FindVariableFeatures(cellMix, selection.method = "vst", nfeatures = 2500)
     cellMix <- ScaleData(cellMix)
