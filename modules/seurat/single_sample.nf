@@ -1,5 +1,6 @@
 process SEURAT_SINGLE_SAMPLE {
     publishDir "$params.output_dir", mode: 'copy', pattern: 'seurat_obj.rds'
+    publishDir "$params.output_dir", mode: 'copy', pattern: 'umap_clusters.png'
     publishDir "$params.output_dir/intermediate_R", mode: 'copy', pattern: 'clusters.rds', enabled: params.save_intermediates
     label "r"
     label "medium_cpu"
@@ -12,6 +13,7 @@ process SEURAT_SINGLE_SAMPLE {
     output:
     path ('clusters.rds'), emit: clusters
     path ('seurat_obj.rds'), emit: seurat_obj
+    path ('umap_clusters.png'), emit: umap_plot
     path "versions.yml", topic: 'versions'
 
     script:
@@ -62,13 +64,19 @@ process SEURAT_SINGLE_SAMPLE {
     dim     <- ifelse(dim >= dim(cellMix@reductions\$pca)[2], dim(cellMix@reductions\$pca)[2], dim)
     cellMix <- FindNeighbors(cellMix, dims = 1:dim)
     cellMix <- FindClusters(cellMix, resolution = $params.resolution)
+    cellMix <- RunUMAP(cellMix, dims = 1:dim)
     saveRDS(cellMix, "seurat_obj.rds")
+
+    # Plot UMAP colored by cluster (clustering is on bin50 cells for stereoseq)
+    png("umap_clusters.png", width = 1200, height = 1000, res = 150)
+    print(DimPlot(cellMix, reduction = "umap", label = TRUE) + ggtitle("UMAP - clusters"))
+    dev.off()
 
     x <- setNames(names(cellMix@active.ident), cellMix@active.ident)
     clusters <- list(splitAsList(unname(x), paste0("cluster", names(x))))
+    saveRDS(clusters, "clusters.rds")
 
     saveRDS(cellMix, "cell_mix.rds")
-    saveRDS(clusters, "clusters.rds")
     writeLines(c(
         '"${task.process}":',
         paste0('    R: ',                   R.Version()\$version.string),
