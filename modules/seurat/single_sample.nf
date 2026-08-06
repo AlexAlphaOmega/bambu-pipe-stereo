@@ -73,7 +73,7 @@ process SEURAT_SINGLE_SAMPLE {
 
     # Plot UMAP colored by cluster (clustering is on bin50 cells for stereoseq)
     png("umap_clusters.png", width = 1200, height = 1000, res = 150)
-    print(DimPlot(cellMix, reduction = "umap", label = TRUE) + ggtitle("UMAP - clusters"))
+    print(DimPlot(cellMix, reduction = "umap", label = TRUE))
     dev.off()
 
     x <- setNames(names(cellMix@active.ident), cellMix@active.ident)
