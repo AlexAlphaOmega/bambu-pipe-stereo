@@ -41,6 +41,10 @@ process SEURAT_SINGLE_SAMPLE {
         saveRDS(NULL, "seurat_obj.rds")
         saveRDS(NULL, "clusters.rds")
         saveRDS(NULL, "cell_mix.rds")
+        # placeholder so the declared umap_clusters.png output exists
+        png("umap_clusters.png", width = 800, height = 600, res = 150)
+        plot.new(); text(0.5, 0.5, paste0("Too few cells for clustering (", ncol(counts), ")"))
+        dev.off()
         writeLines(c(
             '"${task.process}":',
             paste0('    R: ',                   R.Version()\$version.string),
