@@ -1,6 +1,7 @@
 process SEURAT_SINGLE_SAMPLE {
     publishDir "$params.output_dir", mode: 'copy', pattern: 'seurat_obj.rds'
     publishDir "$params.output_dir", mode: 'copy', pattern: 'umap_clusters.png'
+    publishDir "$params.output_dir", mode: 'copy', pattern: 'spatial_clusters.png'
     publishDir "$params.output_dir/intermediate_R", mode: 'copy', pattern: 'clusters.rds', enabled: params.save_intermediates
     label "r"
     label "medium_cpu"
@@ -14,6 +15,7 @@ process SEURAT_SINGLE_SAMPLE {
     path ('clusters.rds'), emit: clusters
     path ('seurat_obj.rds'), emit: seurat_obj
     path ('umap_clusters.png'), emit: umap_plot
+    path ('spatial_clusters.png'), emit: spatial_plot
     path "versions.yml", topic: 'versions'
 
     script:
@@ -22,6 +24,7 @@ process SEURAT_SINGLE_SAMPLE {
     library(SummarizedExperiment)
     library(IRanges)
     library(Seurat)
+    library(ggplot2)
 
     se     <- readRDS("$se")
     counts <- assays(se)\$counts
@@ -41,8 +44,11 @@ process SEURAT_SINGLE_SAMPLE {
         saveRDS(NULL, "seurat_obj.rds")
         saveRDS(NULL, "clusters.rds")
         saveRDS(NULL, "cell_mix.rds")
-        # placeholder so the declared umap_clusters.png output exists
+        # placeholder so the declared png outputs exist
         png("umap_clusters.png", width = 800, height = 600, res = 150)
+        plot.new(); text(0.5, 0.5, paste0("Too few cells for clustering (", ncol(counts), ")"))
+        dev.off()
+        png("spatial_clusters.png", width = 800, height = 600, res = 150)
         plot.new(); text(0.5, 0.5, paste0("Too few cells for clustering (", ncol(counts), ")"))
         dev.off()
         writeLines(c(
@@ -73,7 +79,19 @@ process SEURAT_SINGLE_SAMPLE {
 
     # Plot UMAP colored by cluster (clustering is on bin50 cells for stereoseq)
     png("umap_clusters.png", width = 1200, height = 1000, res = 150)
-    print(DimPlot(cellMix, reduction = "umap", label = TRUE))
+    print(DimPlot(cellMix, reduction = "umap", label = TRUE) + ggtitle("UMAP - clusters"))
+    dev.off()
+
+    # Spatial scatter: parse bin50 coords from barcode (bin50x76y108), color by cluster
+    cellBarcodes <- names(cellMix@active.ident)
+    bcSplit <- strsplit(cellBarcodes, "[xy]")
+    coords <- t(vapply(bcSplit, function(p) as.numeric(p[2:3]), numeric(2)))
+    cl <- as.character(cellMix@active.ident)
+    clFac <- factor(cl)
+    png("spatial_clusters.png", width = 1400, height = 1000, res = 150)
+    plot(coords[,1], coords[,2], col = as.numeric(clFac), pch = 16, cex = 0.4,
+         xlab = "X (bin)", ylab = "Y (bin)", main = "Spatial clusters (bin50)")
+    legend("topright", legend = levels(clFac), col = seq_along(levels(clFac)), pch = 16, cex = 0.5)
     dev.off()
 
     x <- setNames(names(cellMix@active.ident), cellMix@active.ident)
