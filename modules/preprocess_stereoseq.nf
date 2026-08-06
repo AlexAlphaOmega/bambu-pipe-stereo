@@ -53,23 +53,17 @@ process PREPROCESS_STEREOSEQ {
     decompress | chopper_cmd | save_intermediate "${sample}_intermediate_qfilter.fastq.gz" > ${sample}_chopper_out.fastq
 
     #=======================================================================================================
-    # Step 2: Flexiplex barcode/UMI counting + demultiplexing
+    # Step 2: Flexiplex barcode/UMI extraction (modified flexiplex: outputs reads
+    #         without -k; CID filtering is done by ST_BarcodeMap downstream)
     #=======================================================================================================
     IFS=',' read -r _ left_flank barcode umi right_flank < <(awk -F',' -v chem=stereoseq '\$1 == chem' $flank_seq_config)
     flank_seq="-x \$left_flank -b \$barcode -u \$umi -x \$right_flank"
 
-    # 2a. Count barcodes (creates flexiplex_barcodes_counts.txt); use the SAME flank
-    #      search as the demux so the barcode list matches what demux re-extracts.
-    flexiplex -p $task.cpus \$flank_seq -f $params.flexiplex_f_3prime -e $params.flexiplex_e ${sample}_chopper_out.fastq
-
-    # 2b. Extract the barcode list (no whitelist for stereoseq; ST_BarcodeMap does CID filtering)
-    awk -F'\\t' '\$1 ~ /^[ACGTNacgtn]+\$/ && length(\$1) == 25 {print \$1}' flexiplex_barcodes_counts.txt > ${sample}_barcode_list.txt
-
-    # 2c. Demultiplex with the barcode list -> reads with <barcode>_<umi>#<read_id> names
-    flexiplex -p $task.cpus -k ${sample}_barcode_list.txt \$flank_seq -f $params.flexiplex_f_3prime -e $params.flexiplex_e \
+    $params.flexiplex_stereoseq -p $task.cpus \$flank_seq \
+        -f $params.flexiplex_f_3prime -e $params.flexiplex_e -z \
         ${sample}_chopper_out.fastq > ${sample}_flexiplex_out.fastq
 
-    rm ${sample}_chopper_out.fastq flexiplex_barcodes_counts.txt ${sample}_barcode_list.txt
+    rm ${sample}_chopper_out.fastq
 
     #=======================================================================================================
     # Step 3: Split Flexiplex output -> read1 (CID+MID) + read2 (cDNA)
