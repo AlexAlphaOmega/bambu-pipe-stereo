@@ -2,27 +2,23 @@
 """Bin ST_BarcodeMap output + rewrite read name to bambu-pipe format.
 
 Input: ST_BarcodeMap mapped_r2.fq.gz. Read name format:
-    <id>|||CB:Z:x_y|||UR:Z:MID
+    @CID_MID#read_id|||CB:Z:x_y|||UR:Z:MID
+(the first part is the read1 name from the split script; the actual read_id
+is everything after the last '#').
 
 Output (stdout): FASTQ with read name:
-    <bin{bs}_{x//bs}_{y//bs}>_<MID>#<id>
-
-For multiple binsizes (comma-separated, e.g. "50" or "20,50,100"),
-the primary output (stdout) uses the target binsize (default 50).
+    @bin{bs}_{x//bs}_{y//bs}_{MID}#read_id
 """
 import sys
 import gzip
-from pathlib import Path
-
-LINK1_LEN = 15
 
 
 def parse_stereoseq_name(name):
-    """Parse ST_BarcodeMap read name -> (id, x, y, mid)."""
+    """Parse ST_BarcodeMap read name -> (read_id, x, y, mid)."""
     rest = name.strip()
-    # Split on |||
     parts = rest.split("|||")
-    read_id = parts[0]  # everything before |||
+    first = parts[0]  # "@CID_MID#read_id"
+    read_id = first.split("#")[-1]  # strip the @CID_MID# prefix
     cb = None
     ur = None
     for p in parts[1:]:
@@ -38,7 +34,7 @@ def parse_stereoseq_name(name):
 
 def main():
     fastq_gz = sys.argv[1]  # mapped_r2.fq.gz
-    target_bs = int(sys.argv[2]) if len(sys.argv) > 2 else 50  # target binsize (default 50)
+    target_bs = int(sys.argv[2]) if len(sys.argv) > 2 else 50
 
     with gzip.open(fastq_gz, "rt") as fq:
         while True:
@@ -49,17 +45,15 @@ def main():
             sep = fq.readline()
             qual = fq.readline()
 
-            # Parse ST_BarcodeMap read name
             read_id, x, y, mid = parse_stereoseq_name(name)
             if read_id is None:
-                continue  # skip reads without CB/UR
+                continue
 
-            # Bin to target binsize
             bx = x // target_bs
             by = y // target_bs
-            cb = f"bin{target_bs}_{bx}_{by}"
+            # barcode without underscores so bambu's <barcode>_<umi># parse is unambiguous
+            cb = f"bin{target_bs}x{bx}y{by}"
 
-            # Rewrite to bambu-pipe format: <barcode>_<umi>#<read_id>
             new_name = f"@{cb}_{mid}#{read_id}\n"
             sys.stdout.write(new_name)
             sys.stdout.write(seq)
