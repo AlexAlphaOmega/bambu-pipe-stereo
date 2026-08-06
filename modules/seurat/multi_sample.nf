@@ -1,6 +1,7 @@
 process SEURAT_MULTI_SAMPLE {
     publishDir "$params.output_dir", mode: 'copy', pattern: 'seurat_obj.rds'
     publishDir "$params.output_dir", mode: 'copy', pattern: 'umap_clusters.png'
+    publishDir "$params.output_dir", mode: 'copy', pattern: 'spatial_clusters.png'
     publishDir "$params.output_dir/intermediate_R", mode: 'copy', pattern: 'clusters.rds', enabled: params.save_intermediates
     label "r"
     label "medium_cpu"
@@ -15,6 +16,7 @@ process SEURAT_MULTI_SAMPLE {
     path ('clusters.rds'), emit: clusters
     path ('seurat_obj.rds'), emit: seurat_obj
     path ('umap_clusters.png'), emit: umap_plot
+    path ('spatial_clusters.png'), emit: spatial_plot
     path "versions.yml", topic: 'versions'
 
     script:
@@ -23,6 +25,7 @@ process SEURAT_MULTI_SAMPLE {
     library(SummarizedExperiment)
     library(IRanges)
     library(Seurat)
+    library(ggplot2)
 
     # Extract gene count matrix and colData metadata
     se     <- readRDS("$se")
@@ -60,7 +63,19 @@ process SEURAT_MULTI_SAMPLE {
 
     # Plot UMAP colored by cluster
     png("umap_clusters.png", width = 1200, height = 1000, res = 150)
-    print(DimPlot(cellMix, reduction = "umap", group.by = "harmony_clusters", label = TRUE))
+    print(DimPlot(cellMix, reduction = "umap", group.by = "harmony_clusters", label = TRUE) + ggtitle("UMAP - clusters"))
+    dev.off()
+
+    # Spatial scatter: parse bin coords from barcode (bin50x76y108), color by cluster
+    cellBarcodes <- names(cellMix\$harmony_clusters)
+    bcSplit <- strsplit(cellBarcodes, "[xy]")
+    coords <- t(vapply(bcSplit, function(p) as.numeric(p[2:3]), numeric(2)))
+    cl <- as.character(cellMix\$harmony_clusters)
+    clFac <- factor(cl)
+    png("spatial_clusters.png", width = 1400, height = 1000, res = 150)
+    plot(coords[,1], coords[,2], col = as.numeric(clFac), pch = 16, cex = 0.4,
+         xlab = "X (bin)", ylab = "Y (bin)", main = "Spatial clusters (bin50)")
+    legend("topright", legend = levels(clFac), col = seq_along(levels(clFac)), pch = 16, cex = 0.5)
     dev.off()
 
     # Build ordered list of CompressedCharacterLists, one per sample, in quantData order
