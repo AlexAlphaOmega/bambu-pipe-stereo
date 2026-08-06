@@ -60,7 +60,7 @@ process SEURAT_MULTI_SAMPLE {
 
     # Plot UMAP colored by cluster
     png("umap_clusters.png", width = 1200, height = 1000, res = 150)
-    print(DimPlot(cellMix, reduction = "umap", group.by = "harmony_clusters", label = TRUE) + ggtitle("UMAP - clusters"))
+    print(DimPlot(cellMix, reduction = "umap", group.by = "harmony_clusters", label = TRUE))
     dev.off()
 
     # Build ordered list of CompressedCharacterLists, one per sample, in quantData order
