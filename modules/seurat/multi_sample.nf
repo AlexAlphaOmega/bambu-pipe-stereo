@@ -68,15 +68,26 @@ process SEURAT_MULTI_SAMPLE {
 
     # Spatial scatter: parse bin coords from barcode (bin50x76y108), color by cluster
     cellBarcodes <- names(cellMix\$harmony_clusters)
-    bcSplit <- strsplit(cellBarcodes, "[xy]")
-    coords <- t(vapply(bcSplit, function(p) as.numeric(p[2:3]), numeric(2)))
+    cat("first cell barcodes:", head(cellBarcodes, 3), "\n")
+    m <- regexec("^bin\\d+x(\\d+)y(\\d+)", cellBarcodes)
+    parts <- regmatches(cellBarcodes, m)
+    coords <- t(vapply(parts, function(p) {
+        if (length(p) >= 3) as.numeric(p[2:3]) else c(NA, NA)
+    }, numeric(2)))
     cl <- as.character(cellMix\$harmony_clusters)
     clFac <- factor(cl)
-    png("spatial_clusters.png", width = 1400, height = 1000, res = 150)
-    plot(coords[,1], coords[,2], col = as.numeric(clFac), pch = 16, cex = 0.4,
-         xlab = "X (bin)", ylab = "Y (bin)", main = "Spatial clusters (bin50)")
-    legend("topright", legend = levels(clFac), col = seq_along(levels(clFac)), pch = 16, cex = 0.5)
-    dev.off()
+    good <- is.finite(coords[,1]) & is.finite(coords[,2])
+    if (sum(good) > 0) {
+        png("spatial_clusters.png", width = 1400, height = 1000, res = 150)
+        plot(coords[good,1], coords[good,2], col = as.numeric(clFac)[good], pch = 16, cex = 0.4,
+             xlab = "X (bin)", ylab = "Y (bin)", main = "Spatial clusters (bin50)")
+        legend("topright", legend = levels(clFac), col = seq_along(levels(clFac)), pch = 16, cex = 0.5)
+        dev.off()
+    } else {
+        png("spatial_clusters.png", width = 800, height = 600, res = 150)
+        plot.new(); text(0.5, 0.5, "Could not parse bin coords from barcodes")
+        dev.off()
+    }
 
     # Build ordered list of CompressedCharacterLists, one per sample, in quantData order
     allBarcodes   <- names(cellMix\$harmony_clusters)
