@@ -69,7 +69,7 @@ process SEURAT_MULTI_SAMPLE {
     # Spatial scatter: parse bin coords from barcode (bin50x76y108), color by cluster
     cellBarcodes <- names(cellMix\$harmony_clusters)
     cat("first cell barcodes:", head(cellBarcodes, 3), "\n")
-    m <- regexec("^bin\\d+x(\\d+)y(\\d+)", cellBarcodes)
+    m <- regexec(".*bin[0-9]+x([0-9]+)y([0-9]+)", cellBarcodes)
     parts <- regmatches(cellBarcodes, m)
     coords <- t(vapply(parts, function(p) {
         if (length(p) >= 3) as.numeric(p[2:3]) else c(NA, NA)
